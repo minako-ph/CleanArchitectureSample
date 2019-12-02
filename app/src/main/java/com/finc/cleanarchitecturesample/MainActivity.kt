@@ -11,10 +11,22 @@ import io.reactivex.processors.BehaviorProcessor
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.*
 
+// This is a documentations for all the developers who don't get Clean Architecture in Android.
+// I'll try to make it easy to understand.
+// If you have any questions, feel free to ask.
+
+// All classes are here for clarify.
+// There are already some ideas how to divide modules.
+// One is layered-architecture division, the other is domain division.
+// IMO, the ideal state is including both of them.
+// However, if you are not familiar with CleanArchitecture, it would be harder to do at the same time.
+// So, this sample is using the layered-architecture one as a first step.
+// You can also include all the classes here in same module(app module), but restrictions are really important
+// to maintain the source code well.
+
 //
 // ui module
 //
-
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+// ViewModel is an intermediate class, which handles with User events and observe that states(results)
+// In this case, this class is observing the state whether user data is saved or not.
 class UserViewModel(private val userUseCase: UserUseCase) : ViewModel() {
 
     // There would be called every after user events with #click(id:String) are finished.
@@ -64,19 +78,12 @@ class UserViewModel(private val userUseCase: UserUseCase) : ViewModel() {
     }
 }
 
-// This is a documentations for all the developers who don't get Clean Architecture in Android.
-// I'll try to make it easy to understand.
-// If you have any questions, feel free to ask.
-
-// All classes are here for clarify
-
-// This is Data Transfer Object, which means just an entity to identify an instance.
-// Mainly used as de-serialized model. (from json to each platform)
-
-
 //
 // data module
 //
+
+// This is Data Transfer Object, which means just an entity to identify an instance.
+// Mainly used as de-serialized model. (from json to each platform)
 data class UserDTO(val id: String, val firstName: String, val lastName: String)
 
 // I don't really recommend to make UserDataStore interface if you are a beginner.
@@ -104,6 +111,7 @@ class UserRemoteDataStore(val httpClient: Any) {
     }
 }
 
+// This is just interface used in DOMAIN module
 interface UserRepository {
     fun getUser(id: String): Single<User>
     fun saveUser(id: String): Completable
@@ -113,8 +121,21 @@ interface UserRepository {
 // domain module
 //
 
-data class User(val id: String, val displayName: String)
+// User is a domain object, which is not same as UserDTO.
+// Suppose domain doesn't have to have id, first name, last name because ui layer just wants to know
+// account name, which is combination of first name and last name.
+// you should remain all the unnecessary properties private and give domain the necessary things
+// (in this case, getAccountName() is the one.)
+// Thanks to this, you can make the domain clear and testable.
+data class User(
+    private val id: String,
+    private val firstName: String,
+    private val lastName: String
+) {
+    fun getAccoutName() = "$firstName $lastName"
+}
 
+// This is the intermediate layer from data module(UserDTO) to domain module(User)
 class UserRepositoryImpl(
     private val localDataStore: UserLocalDataStore,
     private val remoteDataStore: UserRemoteDataStore
@@ -126,7 +147,7 @@ class UserRepositoryImpl(
         // that is concerned in that domain.
         return localDataStore.fetchUser(id)
             .concatWith { remoteDataStore.fetchUser(id) }
-            .map { User(it.id, "${it.firstName} ${it.lastName}") }
+            .map { User(it.id, it.firstName, it.lastName) }
             .singleOrError()
     }
 
