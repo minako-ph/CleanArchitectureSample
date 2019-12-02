@@ -54,8 +54,9 @@ class MainActivity : AppCompatActivity() {
         })
 
         like_button.setOnClickListener {
-            val id = "implement how to get user id"
-            userViewModel.click(id)
+            // You need to get User domain object by yourself
+            val user = User("id", "first name", "last name")
+            userViewModel.click(user)
         }
     }
 }
@@ -68,8 +69,8 @@ class UserViewModel(private val userUseCase: UserUseCase) : ViewModel() {
     val userSaved: LiveData<Boolean> =
         LiveDataReactiveStreams.fromPublisher(userUseCase.userSaved)
 
-    fun click(id: String) {
-        userUseCase.likeUser(id)
+    fun click(user: User) {
+        userUseCase.likeUser(user)
     }
 
     override fun onCleared() {
@@ -94,7 +95,7 @@ class UserLocalDataStore(val localDataStoredSystem: Any) {
         TODO("room should be any local data stored system in Android. Room is recommended for RDBS.")
     }
 
-    fun saveUser(id: String): Completable {
+    fun saveUser(user: UserDTO): Completable {
         TODO("you need to write the impl for saving user data in local data stored system.")
     }
 }
@@ -106,7 +107,7 @@ class UserRemoteDataStore(val httpClient: Any) {
         TODO("you need to write api call here with http client")
     }
 
-    fun postUser(id: String): Completable {
+    fun postUser(user: UserDTO): Completable {
         TODO("you need to write api call here with http client")
     }
 }
@@ -114,7 +115,7 @@ class UserRemoteDataStore(val httpClient: Any) {
 // This is just interface used in DOMAIN module
 interface UserRepository {
     fun getUser(id: String): Single<User>
-    fun saveUser(id: String): Completable
+    fun saveUser(user: User): Completable
 }
 
 //
@@ -124,13 +125,11 @@ interface UserRepository {
 // User is a domain object, which is not same as UserDTO.
 // Suppose domain doesn't have to have id, first name, last name because ui layer just wants to know
 // account name, which is combination of first name and last name.
-// you should remain all the unnecessary properties private and give domain the necessary things
-// (in this case, getAccountName() is the one.)
 // Thanks to this, you can make the domain clear and testable.
 data class User(
-    private val id: String,
-    private val firstName: String,
-    private val lastName: String
+    val id: String,
+    val firstName: String,
+    val lastName: String
 ) {
     fun getAccoutName() = "$firstName $lastName"
 }
@@ -151,9 +150,10 @@ class UserRepositoryImpl(
             .singleOrError()
     }
 
-    override fun saveUser(id: String): Completable {
-        return remoteDataStore.postUser(id)
-            .andThen(localDataStore.saveUser(id))
+    override fun saveUser(user: User): Completable {
+        val userDTO: UserDTO = UserDTO(user.id, user.firstName, user.lastName)
+        return remoteDataStore.postUser(userDTO)
+            .andThen(localDataStore.saveUser(userDTO))
     }
 }
 
@@ -166,9 +166,9 @@ class UserUseCase(private val userRepository: UserRepository) {
     val userSaved: Flowable<Boolean> = userSavedProcessor
 
     // All UseCase functions shouldn't have returning value!!!!!!!
-    fun likeUser(id: String) {
+    fun likeUser(user: User) {
         compositeDisposable.add(
-            userRepository.saveUser(id)
+            userRepository.saveUser(user)
                 .subscribeOn(Schedulers.io())
                 .subscribe({
                     userSavedProcessor.onNext(true)
