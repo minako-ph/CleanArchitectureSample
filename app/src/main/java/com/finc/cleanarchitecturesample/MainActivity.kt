@@ -1,4 +1,4 @@
-package com.finc.cleanarchtecturesample
+package com.finc.cleanarchitecturesample
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle

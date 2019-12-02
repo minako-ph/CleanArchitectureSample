@@ -1,4 +1,4 @@
-package com.finc.cleanarchtecturesample
+package com.finc.cleanarchitecturesample
 
 import org.junit.Test
 
