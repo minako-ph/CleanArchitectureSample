@@ -112,28 +112,6 @@ class UserRemoteDataStore(val httpClient: Any) {
     }
 }
 
-// This is just interface used in DOMAIN module
-interface UserRepository {
-    fun getUser(id: String): Single<User>
-    fun saveUser(user: User): Completable
-}
-
-//
-// domain module
-//
-
-// User is a domain object, which is not same as UserDTO.
-// Suppose domain doesn't have to have id, first name, last name because ui layer just wants to know
-// account name, which is combination of first name and last name.
-// Thanks to this, you can make the domain clear and testable.
-data class User(
-    val id: String,
-    val firstName: String,
-    val lastName: String
-) {
-    fun getAccoutName() = "$firstName $lastName"
-}
-
 // This is the intermediate layer from data module(UserDTO) to domain module(User)
 class UserRepositoryImpl(
     private val localDataStore: UserLocalDataStore,
@@ -155,6 +133,29 @@ class UserRepositoryImpl(
         return remoteDataStore.postUser(userDTO)
             .andThen(localDataStore.saveUser(userDTO))
     }
+}
+
+//
+// domain module
+//
+
+// User is a domain object, which is not same as UserDTO.
+// Suppose domain doesn't have to have id, first name, last name because ui layer just wants to know
+// account name, which is combination of first name and last name.
+// Thanks to this, you can make the domain clear and testable.
+data class User(
+    val id: String,
+    val firstName: String,
+    val lastName: String
+) {
+    fun getAccoutName() = "$firstName $lastName"
+}
+
+
+// This is just interface used in DOMAIN module
+interface UserRepository {
+    fun getUser(id: String): Single<User>
+    fun saveUser(user: User): Completable
 }
 
 // Suppose this is a Matching app like Tinder.
